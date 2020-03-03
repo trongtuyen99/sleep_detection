@@ -11,7 +11,7 @@ import os
 import cv2
 
 # Cau hinh duong dan den file alarm.wav
-wav_path = "alarm.wav" # path on colab
+wav_path = "../alarm.wav" # path on colab
 
 # Ham phat ra am thanh
 def play_sound(path):
@@ -40,8 +40,8 @@ max_sleep_frames = 16
 sleep_frames = 0
 alarmed = False
 
-face_detect = cv2.CascadeClassifier("haarcascade_frontalface_default.xml")
-landmark_detect = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat")
+face_detect = cv2.CascadeClassifier("../haarcascade_frontalface_default.xml")
+landmark_detect = dlib.shape_predictor("../shape_predictor_68_face_landmarks.dat")
 
 (left_eye_start, left_eye_end) = face_utils.FACIAL_LANDMARKS_IDXS["left_eye"]
 (right_eye_start, right_eye_end) = face_utils.FACIAL_LANDMARKS_IDXS["right_eye"]
