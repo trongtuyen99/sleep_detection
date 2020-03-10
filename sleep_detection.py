@@ -11,7 +11,17 @@ import os
 import cv2
 
 # Cau hinh duong dan den file alarm.wav
-wav_path = "../alarm.wav" # path on colab
+wav_path = "./alarm.wav" # 
+eye_ratio_threshold = 0.25 # fix for another man
+max_sleep_frames = 16 # case config
+sleep_frames = 0
+alarmed = False
+
+face_detect = cv2.CascadeClassifier("./haarcascade_frontalface_default.xml")
+landmark_detect = dlib.shape_predictor("./shape_predictor_68_face_landmarks.dat")
+
+(left_eye_start, left_eye_end) = face_utils.FACIAL_LANDMARKS_IDXS["left_eye"]
+(right_eye_start, right_eye_end) = face_utils.FACIAL_LANDMARKS_IDXS["right_eye"]
 
 # Ham phat ra am thanh
 def play_sound(path):
@@ -35,16 +45,18 @@ def eye_ratio(eye):
 
 	return eye_ratio_val
 
-eye_ratio_threshold = 0.25 # fix for another man
-max_sleep_frames = 16
-sleep_frames = 0
-alarmed = False
+###
+def check_sleep(left_eye_ratio, right_eye_ratio):
+	if left_eye_ratio + right_eye_ratio < 2 * eye_ratio_threshold\
+	and  left_eye_ratio < eye_ratio_threshold and right_eye_ratio < eye_ratio_threshold:
+		return True
+	else:
+		return False
+def sharpen(image):
+	kernel = np.array([[0, -1, 0],[-1, 5, -1],[0, -1, 0]])
+	sharp = cv2.filter2D(image, -1, kernel)
+	return sharp
 
-face_detect = cv2.CascadeClassifier("../haarcascade_frontalface_default.xml")
-landmark_detect = dlib.shape_predictor("../shape_predictor_68_face_landmarks.dat")
-
-(left_eye_start, left_eye_end) = face_utils.FACIAL_LANDMARKS_IDXS["left_eye"]
-(right_eye_start, right_eye_end) = face_utils.FACIAL_LANDMARKS_IDXS["right_eye"]
 
 # Doc tu camera
 video_capture = cv2.VideoCapture(0)
@@ -55,11 +67,12 @@ while True:
 		break
 		
 	frame = imutils.resize(frame, width=450)
+	frame = sharpen(frame)
 	gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 	faces = face_detect.detectMultiScale(gray, scaleFactor=1.1,minNeighbors=5, minSize=(100, 100),flags=cv2.CASCADE_SCALE_IMAGE);
 
 	for (x, y, w, h) in faces:
-    # show recangle around face
+    		# show recangle around face
 		cv2.rectangle(frame, (x,y), (x+w, y+h), (0,255,0),2)
 		rect = dlib.rectangle(int(x), int(y), int(x + w),int(y + h))
 		# Nhan dien cac diem landmark
@@ -80,7 +93,7 @@ while True:
 		cv2.drawContours(frame, [left_eye_bound], -1, (0, 255, 0), 1)
 		cv2.drawContours(frame, [right_eye_bound], -1, (0, 255, 0), 1)
 		# Check xem mat co nham khong
-		if eye_avg_ratio < eye_ratio_threshold:
+		if check_sleep(left_eye_ratio, right_eye_ratio):
 			sleep_frames += 1
 			if sleep_frames >= max_sleep_frames:
 				if not alarmed:
@@ -89,7 +102,7 @@ while True:
 
 					# Tien hanh phat am thanh trong 1 luong rieng
 					t = Thread(target=play_sound,
-							   args=(wav_path,))
+							   args=(wav_path,))# add wav_path, here or not
 					t.deamon = True
 					t.start()
 
@@ -107,7 +120,7 @@ while True:
 			# Hien thi gia tri eye ratio trung binh
 			cv2.putText(frame, "EYE AVG RATIO: {:.3f}".format(eye_avg_ratio), (10, 30),	cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 0, 0), 2)
 	  
-		cv2_imshow(frame)
+		cv2.imshow("sleeping detection",frame)
 	  # Bam Esc de thoat
 	key = cv2.waitKey(1) & 0xFF
 	if key == 27:
